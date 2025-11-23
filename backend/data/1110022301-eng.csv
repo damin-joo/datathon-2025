@@ -1,0 +1,77 @@
+﻿"Household spending by household income quintile, Canada, regions and provinces c 1 2 3 4 5 6 7"
+"Frequency: Annual"
+"Table: 11-10-0223-01 (formerly CANSIM 203-0022)"
+"Release date: 2025-05-21"
+"Geography: Canada, Geographical region of Canada, Province or territory"
+""
+""
+
+"Geography","Canada 8",,,,,,,,
+"Before-tax household income quintile","All quintiles",,,,,,,,
+"Statistic","Average expenditure per household",,,,,,,,
+"Household expenditures, summary-level categories","2015","2016","2017","2018","2019","2020","2021","2022","2023"
+,"Dollars",,,,,,,,
+"Total expenditure","82,697","84,489","86,479","..","93,724","..","92,500","..","108,225"
+"Total current consumption","60,516","62,183","63,944","..","68,980","..","67,126","..","76,750"
+"Food expenditures","8,629","8,784","8,968","..","10,311","..","10,305","..","12,046"
+"Food purchased from stores","6,126","6,176","6,364","..","7,536","..","8,065","..","8,659"
+"Food purchased from restaurants","2,502","2,608","2,604","..","2,775","..","2,189","..","3,351"
+"Shelter","17,509","18,032","18,640","..","20,200","..","21,106","..","24,671"
+"Principal accommodation","15,802","16,293","16,811","..","18,371","..","19,582","..","22,355"
+"Rented living quarters","3,790","3,868","4,038","..","4,160","..","4,145","..","5,258"
+"Owned living quarters","9,534","9,965","10,287","..","11,676","..","12,700","..","14,183"
+"Water, fuel and electricity for principal accommodation","2,478","2,460","2,486","..","2,535","..","2,737","..","2,914"
+"Other accommodation","1,707","1,739","1,829","..","1,829","..","1,523","..","2,316"
+"Household operations","4,490","4,704","4,709","..","5,448","..","5,587","..","6,014"
+"Communications","2,187","2,246","2,404","..","2,670","..","3,001","..","3,442"
+"Household furnishings and equipment","2,166","2,300","2,271","..","2,486","..","3,570","..","3,390"
+"Household furnishings","947","935","973","..","1,124","..","1,591","..","1,547"
+"Household equipment","1,088","1,218","1,140","..","1,218","..","1,727","..","1,569"
+"Household appliances","465","537","533","..","582","..","817","..","795"
+"Clothing and accessories","3,374","3,371","3,453","..","3,344","..","2,303","..","2,739"
+"Transportation","11,761","11,909","12,721","..","12,737","..","10,099","..","12,090"
+"Private transportation","10,538","10,660","11,436","..","11,258","..","9,501","..","10,292"
+"Public transportation","1,224","1,249","1,285","..","1,479","..","598","..","1,799"
+"Health care","2,361","2,574","2,564","..","2,780","..","2,776","..","3,087"
+"Direct health care costs to household","1,643","1,824","1,799","..","1,918","..","2,059","..","2,332"
+"Personal care","1,316","1,311","1,189","..","1,384","..","1,430","..","1,860"
+"Recreation","3,981","3,935","3,979","..","4,624","..","4,223","..","5,231"
+"Recreational equipment and related services","954","914","980","..","995","..","1,539","..","1,443"
+"Home entertainment equipment and services","261","200","203","..","209","..","371","..","301"
+"Recreational services","2,148","2,132","2,184","..","2,593","..","1,168","..","2,578"
+"Recreational vehicles and associated services","618","689","613","..","826","..","1,144","..","909"
+"Education","1,540","1,688","1,783","..","1,691","..","1,797","..","1,694"
+"Reading materials and other printed matter","168","156","154","..","165","..","199","..","195"
+"Tobacco products, alcoholic beverages and cannabis for non-medical use","..","..","..","..","1,785","..","1,803","..","1,809"
+"Tobacco products and alcoholic beverages (Terminated)","1,336t","1,406t","1,463t","..t","..t","..t","..t","..t","..t"
+"Games of chance","180","217","183","..","186","..","173","..","192"
+"Miscellaneous expenditures","1,703","1,794","1,865","..","1,838","..","1,754","..","1,732"
+"Income taxes 9","15,334","15,310","15,144","..","17,167","..","18,181","..","23,681"
+"Personal insurance payments and pension contributions","4,880","5,067","5,184","..","5,297","..","5,519","..","6,328"
+"Gifts of money, support payments and charitable contributions","1,967","1,929","2,207","..","2,280","..","1,674","..","1,465"
+
+Symbol legend:
+.., not available for a specific reference period
+
+
+"Table Corrections:"
+Date,Note
+"2017-11-09","On November 9, 2017, the data from 2014 were corrected for the series "Makeup, skin care, manicure and fragrance products". As a result, the data for the series "Personal care products", "Personal care", "Total current consumption" and "Total expenditure" may have also changed."
+
+
+
+Footnotes:
+1,"All households are ranked from lowest to highest according to the value of their before-tax income. The ranked population is then divided into five groups of equal numbers of units, called quintiles. Annual income boundaries are available upon request from Client Services."
+2,"For more information about survey methodology, data quality, variable definitions and data products, see the Survey of Household Spending User Guide (catalogue number 62F0026MIE) available free on the Statistics Canada website: <a href="https://www5.statcan.gc.ca/bsolc/olc-cel/olc-cel?catno=62F0026M&chropg=1&lang=eng">Household expenditures research papers series</a>."
+3,"For 2012, household expenditure data were also collected in the three territories. The data are available in table 11-10-0126-01 (formerly CANSIM table 203-0030). However, caution should be used when comparing provincial and territorial data since the collection method was different in the territories."
+4,"Starting with the 2017 reference year, the Survey of Household Spending (SHS) uses survey weights which take into account population projections from the 2016 Census. Estimates from SHS 2010 to 2016 are based on survey weights which take into account population projections from the 2011 Census."
+5,"To ensure data quality, suppression of expenditure estimates is based on the coefficient of variation (CV). Expenditures that have a CV greater than or equal to 35% are suppressed as they are too unreliable to be published."
+6,"Starting with the 2017 reference year, the Survey of Household Spending is conducted every two years."
+7,"The 2019 Survey of Household Spending questionnaire was streamlined to reduce respondent burden. As a result, some data series are no longer available or have been combined to create new series starting with reference year 2019. As well, estimates for some expenditure categories in 2019 may no longer be directly comparable to those from previous years due to changes to the questionnaire and/or to the mode used to collect certain expenditures. Additional information on the impact of these changes is available upon request."
+8,"Canada-level statistics include the 10 provinces only."
+9,"Starting in 2014, expenditure estimates for provincial health insurance premiums are included with income taxes. These estimates are calculated using information from personal income tax data (T1). Previously, provincial health insurance premiums were included with health care expenditures."
+
+
+
+"How to cite: Statistics Canada. Table 11-10-0223-01  Household spending by household income quintile, Canada, regions and provinces"
+https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110022301
