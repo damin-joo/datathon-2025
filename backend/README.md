@@ -5,7 +5,7 @@ Carbon Emission Data: https://decarbonapp.com/data/
 Flask
 BigQuery
 
-# Running the project
+# Run
+python3 -m venv venv
 source venv/bin/activate
-python3 app.py
-pip install pandas
+pip install -r requirements.txt

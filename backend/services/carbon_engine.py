@@ -1,37 +1,41 @@
+import os
 import pandas as pd
 
-# Load CSVs
-transactions = pd.read_csv("../data/transactions.csv")
-co2e_data = pd.read_csv("../data/decarbon_categories.csv")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # services/
+DATA_DIR = os.path.join(BASE_DIR, "..", "data")
 
-# Merge transaction data with CO2e per category
-transactions = transactions.merge(
-    co2e_data[['category_id', 'co2e_per_dollar', 'group', 'hierarchy', 'mods']],
-    left_on='merchant_category',
-    right_on='category_id',
-    how='left'
-)
+CATEGORIES_FILE = os.path.join(DATA_DIR, "decarbon_categories.csv")
+cat_df = pd.read_csv(CATEGORIES_FILE, dtype={"category_id": str}).set_index("category_id")
 
-# Apply any modifier if needed
-transactions['adjusted_co2e_per_dollar'] = transactions['co2e_per_dollar'] * (transactions['mods'].fillna(1))
+def get_category_info(category_id):
+    if str(category_id) not in cat_df.index:
+        return None
+    row = cat_df.loc[str(category_id)]
+    return {
+        "group": row["group"],
+        "co2e_per_dollar": float(row["co2e_per_dollar"])
+    }
 
-# Calculate CO2e per transaction
-transactions['co2e'] = transactions['amount'] * transactions['adjusted_co2e_per_dollar']
+def compute_co2_grams(amount, category_id):
+    info = get_category_info(category_id)
+    if not info:
+        return 0
+    return float(amount) * info["co2e_per_dollar"]
 
-# Aggregate total CO2e per user
-user_totals = transactions.groupby('user_id').agg(
-    total_co2e=('co2e', 'sum')
-).reset_index()
+POINTS = {"good": 10, "neutral": 0, "bad": -20}
 
-# Optional: category-level summary
-category_summary = transactions.groupby(['category_id', 'group', 'hierarchy']).agg(
-    total_co2e=('co2e', 'sum'),
-    avg_co2e_per_dollar=('adjusted_co2e_per_dollar', 'mean'),
-    transaction_count=('amount', 'count')
-).reset_index()
+def classify_transaction(category_id):
+    info = get_category_info(category_id)
+    if not info:
+        return "neutral", "Unknown category"
 
-print("User Totals:")
-print(user_totals)
+    g = info["group"]
+    co2 = info["co2e_per_dollar"]
 
-print("\nCategory Summary:")
-print(category_summary.sort_values('total_co2e', ascending=False))
+    if g in ["renewable_energy", "public_transport"] or co2 < 0.1:
+        return "good", "Sustainable category or low CO₂ intensity"
+
+    if g in ["fast_fashion", "electronics"] or co2 > 1.0:
+        return "bad", "High CO₂ intensity category"
+
+    return "neutral", "Moderate CO₂"

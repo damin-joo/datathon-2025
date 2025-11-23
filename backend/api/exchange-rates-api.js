@@ -4,7 +4,6 @@ const API_PROMPT = "GET https://bcd-api-dca-ipa.cbsa-asfc.cloud-nuage.canada.ca/
 const todayDate = formatDate(new Date());
 const yesterdayDate = getYesterdayDate();
 
-
 // 2. Start the function to make the request
 async function getConversionResult(usdAmount) {
     // 
