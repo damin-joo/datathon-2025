@@ -3,7 +3,6 @@ import csv
 import os
 
 transaction_bp = Blueprint("transaction_bp", __name__)
-
 CSV_PATH = os.path.join(os.path.dirname(__file__), '../data/transactions.csv')
 CATEGORY_CSV_PATH = os.path.join(os.path.dirname(__file__), '../data/decarbon_categories.csv')
 
