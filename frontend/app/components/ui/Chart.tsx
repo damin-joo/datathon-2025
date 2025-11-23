@@ -11,13 +11,13 @@ import {
 } from "recharts";
 
 const dummyData = [
-  { month: "Jan", score: 42 },
-  { month: "Feb", score: 48 },
-  { month: "Mar", score: 55 },
-  { month: "Apr", score: 61 },
-  { month: "May", score: 58 },
-  { month: "Jun", score: 67 },
-  { month: "Jul", score: 72 },
+  { month: "Jan", score: 0 },
+  { month: "Feb", score: 0 },
+  { month: "Mar", score: 0 },
+  { month: "Apr", score: 0 },
+  { month: "May", score: 0 },
+  { month: "Jun", score: 0 },
+  { month: "Jul", score: 0 },
 ];
 
 export default function Chart({ data = dummyData }) {

@@ -7,11 +7,11 @@ interface ScoreItem {
 }
 
 const dummyScores: ScoreItem[] = [
-  { id: 1, category: "Transportation", impact: -12 },
-  { id: 2, category: "Electricity Usage", impact: +20 },
-  { id: 3, category: "Waste Reduction", impact: +14 },
-  { id: 4, category: "Food Consumption", impact: -5 },
-  { id: 5, category: "Shopping Habits", impact: +8 },
+  { id: 1, category: "Transportation", impact: 0 },
+  { id: 2, category: "Electricity Usage", impact: 0 },
+  { id: 3, category: "Waste Reduction", impact: 0 },
+  { id: 4, category: "Food Consumption", impact: 0 },
+  { id: 5, category: "Shopping Habits", impact: 0 },
 ];
 
 export default function ScoringBreakdown({ data = dummyScores }) {
