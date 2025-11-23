@@ -12,7 +12,7 @@ import UserMenu from "./ui/UserMenu";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Ranking", href: "/ranking", icon: Medal },
+  { name: "Transactions", href: "/transactions", icon: Medal },
   { name: "Scoring", href: "/scoring", icon: BarChart3 },
   { name: "Goals", href: "/goals", icon: Target }
 ];

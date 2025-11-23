@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 
-goals_bp = Blueprint("goals_bp", __name__, url_prefix="/api/goals")
+goals_bp = Blueprint("goals_bp", __name__)
 
 dummyGoals = [
     {"id": 1, "title": "Reduce Monthly Plastic Waste", "current": 40, "target": 100},

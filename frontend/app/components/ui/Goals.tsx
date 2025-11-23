@@ -11,20 +11,20 @@ const dummyGoals: Goal[] = [
   {
     id: 1,
     title: "Reduce Monthly Plastic Waste",
-    current: 40,
-    target: 100,
+    current: 0,
+    target: 0,
   },
   {
     id: 2,
     title: "Increase Eco-Score",
-    current: 62,
-    target: 80,
+    current: 0,
+    target: 0,
   },
   {
     id: 3,
     title: "Lower Transportation Emissions",
-    current: 30,
-    target: 60,
+    current: 0,
+    target: 0,
   },
 ];
 
