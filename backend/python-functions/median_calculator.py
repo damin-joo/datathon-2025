@@ -1,20 +1,19 @@
 import numpy as np
 import random
 import pandas as pd
+import os
 
 GOVERNMENT_BASED_MEDIAN_FILE = "..\\data\\1110022301-eng.csv"
-TARGET_SIZE = 20
 
 def main():
     median_df = get_gov_median_file_wanted_data()
     display_df_info(median_df)
-    generate_random_data()
-
+    return
 
 def get_gov_median_file_wanted_data():
     try:
         df_gov_median_1 = pd.read_csv(GOVERNMENT_BASED_MEDIAN_FILE, header=12)
-        df_gov_median = df_gov_median_1.iloc[:49]
+        df_gov_median = df_gov_median_1.iloc[:50]
         return df_gov_median
     except Exception as e:
         print(f"Failed to get the government-based median customer spending pattern data.")
@@ -83,31 +82,31 @@ def generate_random_data(target_median: float, size: int, spread: float = 10.0) 
     return dataset_df
 
 # --- Example Usage ---
-TARGET_MEDIAN = 75.0
-SAMPLE_SIZE = 21  # Changed to an odd number (e.g., 21) to show that case
-DATA_SPREAD = 25.0 # Spread remains the same
+SAMPLE_SIZE = 20  # Changed to an odd number (e.g., 21) to show that case
+DATA_SPREAD = 10.0 
 
-# Set a seed for reproducibility
-random.seed(42)
-np.random.seed(42)
+def generate_20_random_data():
+    # Set a seed for reproducibility
+    random.seed(42)
+    np.random.seed(42)
 
-# Generate and test the dataset
-generated_df = generate_data_with_median(
-    target_median=TARGET_MEDIAN,
-    size=SAMPLE_SIZE,
-    spread=DATA_SPREAD
-)
+    # Generate and test the dataset
+    generated_df = generate_random_data(
+        target_median=TARGET_MEDIAN,
+        size=SAMPLE_SIZE,
+        spread=DATA_SPREAD
+    )
 
-# Print the results
-print(f"Target Median: {TARGET_MEDIAN}")
-print(f"Sample Size: {SAMPLE_SIZE}")
-print("-" * 30)
-print("Generated DataFrame Head:")
-print(generated_df.head())
-print("-" * 30)
-print(f"Calculated Median (Pandas): {generated_df['Value'].median():.2f}")
-print(f"Data Range: [{generated_df['Value'].min():.2f}, {generated_df['Value'].max():.2f}]")
-print(f"Verification Check: {'SUCCESS' if generated_df['Value'].median() == TARGET_MEDIAN else 'FAIL'}")
+    # Print the results
+    print(f"Target Median: {TARGET_MEDIAN}")
+    print(f"Sample Size: {SAMPLE_SIZE}")
+    print("-" * 30)
+    print("Generated DataFrame Head:")
+    print(generated_df.head())
+    print("-" * 30)
+    print(f"Calculated Median (Pandas): {generated_df['Value'].median():.2f}")
+    print(f"Data Range: [{generated_df['Value'].min():.2f}, {generated_df['Value'].max():.2f}]")
+    print(f"Verification Check: {'SUCCESS' if generated_df['Value'].median() == TARGET_MEDIAN else 'FAIL'}")
     
 
 if __name__ == "__main__":
