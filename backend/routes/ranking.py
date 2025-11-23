@@ -1,19 +1,22 @@
+# Leaderboard route
 from flask import Blueprint, jsonify
+# from services.local_db import load_transactions
 
-ranking_bp = Blueprint("ranking_bp", __name__, url_prefix="/api/rank")
+ranking_bp = Blueprint("ranking", __name__)
 
-# Get user rank
-@ranking_bp.route("/<user_id>", methods=["GET"])
-def get_rank(user_id):
-    # TODO: Fetch rank from BigQuery
-    return jsonify({"user_id": user_id, "rank": 42, "level": "Gold"})
+dummyRanking = [
+    {"id": 1, "name": "Alice Kim", "score": 892, "rank": 1},
+    {"id": 2, "name": "Ben Torres", "score": 874, "rank": 2},
+    {"id": 3, "name": "Clara Wu", "score": 861, "rank": 3},
+    {"id": 4, "name": "Daniel Park", "score": 830, "rank": 4},
+    {"id": 5, "name": "Eli Johnson", "score": 804, "rank": 5},
+    {"id": 6, "name": "Fatima Ali", "score": 790, "rank": 6},
+    {"id": 7, "name": "George Liu", "score": 775, "rank": 7},
+    {"id": 8, "name": "Heather Lee", "score": 760, "rank": 8},
+    {"id": 9, "name": "Ian Foster", "score": 742, "rank": 9},
+    {"id": 10, "name": "Jenny Cho", "score": 731, "rank": 10},
+]
 
-# Global leaderboard
-@ranking_bp.route("/leaderboard", methods=["GET"])
-def leaderboard():
-    # TODO: Query top 10 users from BigQuery
-    leaderboard = [
-        {"user_id": "1", "eco_score": 95, "level": "Platinum"},
-        {"user_id": "2", "eco_score": 90, "level": "Gold"}
-    ]
-    return jsonify({"leaderboard": leaderboard})
+@ranking_bp.route("/rankings", methods=["GET"])
+def get_rankings():
+    return jsonify(dummyRanking)

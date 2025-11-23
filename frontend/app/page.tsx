@@ -81,6 +81,12 @@ export default function Home() {
             </Card>
           </div>
         </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Card title="Top Impact Categories"></Card>
+          </div>
+        </section>
       </div>
     </>
   );
