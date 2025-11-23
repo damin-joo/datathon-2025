@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import pandas as pd
 
 GOVERNMENT_BASED_MEDIAN_FILE = "..\\data\\1110022301-eng.csv"
@@ -6,6 +7,8 @@ TARGET_SIZE = 20
 
 def main():
     median_df = get_gov_median_file_wanted_data()
+    display_df_info(median_df)
+    generate_random_data()
 
 
 def get_gov_median_file_wanted_data():
@@ -15,6 +18,11 @@ def get_gov_median_file_wanted_data():
         return df_gov_median
     except Exception as e:
         print(f"Failed to get the government-based median customer spending pattern data.")
+
+def display_df_info(df: pd.DataFrame):
+    print(f"\nDataFrame Info: {df.info()}")
+    print(f"\nColumns: {df.columns.tolist()}")
+    print(f"\nHeader: {df.head()}")
 
 def generate_random_data(target_median: float, size: int, spread: float = 10.0) -> pd.DataFrame:
     """
