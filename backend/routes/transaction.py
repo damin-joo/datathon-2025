@@ -1,10 +1,40 @@
 from flask import Blueprint, request, jsonify
 import csv
 import os
+import math
 
 transaction_bp = Blueprint("transaction_bp", __name__)
 CSV_PATH = os.path.join(os.path.dirname(__file__), '../data/transactions.csv')
 CATEGORY_CSV_PATH = os.path.join(os.path.dirname(__file__), '../data/decarbon_categories.csv')
+
+# Try to import the percentile helper from services; fall back to a local implementation if unavailable.
+try:
+    # when running as module, this may resolve
+    from backend.services.calculate_percentile import percentile_of_value  # type: ignore
+except Exception:
+    try:
+        # when running from backend dir, plain package import may work
+        from services.calculate_percentile import percentile_of_value  # type: ignore
+    except Exception:
+        # local fallback implementation using numpy (lightweight)
+        def percentile_of_value(importingData, raw_data):
+            try:
+                import numpy as np
+            except Exception:
+                # last-resort pure-Python percentile (rank method)
+                if not raw_data:
+                    return 0.0
+                count_below = sum(1 for x in raw_data if x < importingData)
+                count_equal = sum(1 for x in raw_data if x == importingData)
+                return (count_below + 0.5 * count_equal) / len(raw_data) * 100.0
+
+            raw_array = np.array(raw_data)
+            if raw_array.size == 0:
+                return 0.0
+            count_below = np.sum(raw_array < importingData)
+            count_equal = np.sum(raw_array == importingData)
+            percentile = (count_below + 0.5 * count_equal) / raw_array.size * 100.0
+            return float(percentile)
 
 
 # Load category metadata (name, co2e_per_dollar) and compute an env score (1..10)
@@ -102,7 +132,7 @@ def api_transactions():
     return jsonify(transactions)
 
 
-@transaction_bp.route("/categories", methods=["GET"])
+@transaction_bp.route("/transactions/categories", methods=["GET"])
 def api_transaction_categories():
     """Return a summary list of categories with name, co2e_per_dollar and env_score.
 
@@ -122,7 +152,7 @@ def api_transaction_categories():
         return jsonify({"error": str(e)}), 500
 
 
-@transaction_bp.route("/top", methods=["GET"])
+@transaction_bp.route("/transactions/top", methods=["GET"])
 def api_transactions_top_categories():
     """Return top categories by total CO2 impact (total_spend * co2e_per_dollar).
 
@@ -166,6 +196,7 @@ def api_transactions_top_categories():
         name = cat_info.get('name', cid)
         total_spend = data['total_spend']
         total_co2e = total_spend * co2
+        # keep raw total_co2e for percentile calculation, we'll add percentile after
         result.append({
             'category_id': cid,
             'name': name,
@@ -173,16 +204,42 @@ def api_transactions_top_categories():
             'transaction_count': data['count'],
             'co2e_per_dollar': co2,
             'env_score': env_score,
-            'total_co2e': round(total_co2e, 2)
+            'total_co2e': round(total_co2e, 2),
+            '_total_co2e_raw': total_co2e
         })
 
     # sort by total_co2e desc
     result.sort(key=lambda x: x.get('total_co2e', 0), reverse=True)
 
+    # compute percentile (0-100) for total_co2e across all categories
+    try:
+        vals = [r['_total_co2e_raw'] for r in result]
+        # use the shared percentile helper (imported above or fallback)
+        for r in result:
+            try:
+                v = r.get('_total_co2e_raw', 0.0)
+                p = percentile_of_value(v, vals)
+                # ensure numeric and clamp
+                if p is None or (isinstance(p, float) and (math.isnan(p) or math.isinf(p))):
+                    r['percentile'] = None
+                else:
+                    # round to 2 decimals
+                    r['percentile'] = round(float(p), 2)
+            except Exception:
+                r['percentile'] = None
+    except Exception:
+        for r in result:
+            r['percentile'] = None
+
+    # remove internal raw field before returning
+    for r in result:
+        if '_total_co2e_raw' in r:
+            del r['_total_co2e_raw']
+
     return jsonify(result[:max(0, limit)])
 
 
-@transaction_bp.route("/total", methods=["GET"])
+@transaction_bp.route("/transactions/total", methods=["GET"])
 def api_transactions_total():
     """
     Return total spend for a given month.

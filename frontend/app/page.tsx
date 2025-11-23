@@ -37,7 +37,7 @@ export default function Home() {
         const endpoints = [
           `${backend}/api/goals`,
           `${backend}/api/monthly-scores`,
-          `${backend}/api/scores`,
+          `${backend}/api/score`,
           `${backend}/api/transactions`,
         ];
 
@@ -58,7 +58,7 @@ export default function Home() {
 
         setGoals(jsons[0] ?? []);
         setMonthlyScores(jsons[1] ?? []);
-        setScores(jsons[2] ?? null);
+        setScores(jsons[2] ?? null); // now /api/score returns { score, total_co2e }
         setTransactions(jsons[3] ?? []);
       } catch (err: any) {
         console.error("Error fetching dashboard data:", err);
@@ -139,6 +139,9 @@ export default function Home() {
     }
   }
 
+  // Format total spend with thousands separators and two decimals
+  const formattedTotalSpend = totalSpend !== null ? `$${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-`;
+
   return (
     <>
       <Head>
@@ -151,7 +154,7 @@ export default function Home() {
 
         {/* Top Summary Cards */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card title="Monthly Spend" value={totalSpend !== null ? `$${totalSpend.toFixed(2)}` : `-`} />
+          <Card title="Monthly Spend" value={formattedTotalSpend} />
           <Card title="Eco Score" value={`${ecoScore || 0}%`} />
         </section>
 
