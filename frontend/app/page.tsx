@@ -176,6 +176,7 @@ export default function Home() {
             <div className="grid gap-3">
               <Card title="Eco Score Progress" value={`${ecoScore || 0}%`} />
               <Card title="Spending Reduction" value={`${goals?.[0]?.spending_reduction ?? 0}%`} />
+              <Card title="Top Impact Categories"></Card>
             </div>
           </div>
         </section>
@@ -197,11 +198,11 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <Card title="Top Impact Categories"></Card>
           </div>
-        </section>
+        </section> */}
       </div>
     </>
   );
