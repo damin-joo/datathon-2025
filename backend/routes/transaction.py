@@ -7,6 +7,7 @@ dummyTransactions = [
     {"id": 2, "name": "Whole Foods", "category": "Groceries", "amount": -54.20, "date": "2025-01-11"},
     {"id": 3, "name": "Uber Ride", "category": "Transport", "amount": -16.50, "date": "2025-01-10"},
     {"id": 4, "name": "Solar Credit", "category": "Eco Reward", "amount": 5.00, "date": "2025-01-08"},
+    {"id": 5, "name": "Gym Membership", "category": "Health", "amount": -35.00, "date": "2025-01-07"},
 ]
 
 @transaction_bp.route("/transactions", methods=["GET"])
