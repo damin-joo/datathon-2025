@@ -4,24 +4,20 @@ import os
 import math
 
 transaction_bp = Blueprint("transaction_bp", __name__)
-CSV_PATH = os.path.join(os.path.dirname(__file__), '../data/transactions.csv')
-CATEGORY_CSV_PATH = os.path.join(os.path.dirname(__file__), '../data/decarbon_categories.csv')
+CSV_PATH = os.path.join(os.path.dirname(__file__), "../data/transactions.csv")
+CATEGORY_CSV_PATH = os.path.join(os.path.dirname(__file__), "../data/decarbon_categories.csv")
 
 # Try to import the percentile helper from services; fall back to a local implementation if unavailable.
 try:
-    # when running as module, this may resolve
     from backend.services.calculate_percentile import percentile_of_value  # type: ignore
 except Exception:
     try:
-        # when running from backend dir, plain package import may work
         from services.calculate_percentile import percentile_of_value  # type: ignore
     except Exception:
-        # local fallback implementation using numpy (lightweight)
         def percentile_of_value(importingData, raw_data):
             try:
                 import numpy as np
             except Exception:
-                # last-resort pure-Python percentile (rank method)
                 if not raw_data:
                     return 0.0
                 count_below = sum(1 for x in raw_data if x < importingData)
@@ -36,83 +32,106 @@ except Exception:
             percentile = (count_below + 0.5 * count_equal) / raw_array.size * 100.0
             return float(percentile)
 
+try:
+    from backend.services.merchant_classifier import predict_category as ml_predict
+except Exception:
+    try:
+        from services.merchant_classifier import predict_category as ml_predict
+    except Exception:  # pragma: no cover - fallback for missing dependency
+        def ml_predict(_merchant):
+            return []
 
-# Load category metadata (name, co2e_per_dollar) and compute an env score (1..10)
+
 def _load_category_map():
+    """Load category metadata and attach env scores."""
     cat_map = {}
     try:
-        with open(CATEGORY_CSV_PATH, newline='') as csvfile:
+        with open(CATEGORY_CSV_PATH, newline="") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                cid = (row.get('category_id') or '').strip()
+                cid = (row.get("category_id") or "").strip()
                 if not cid:
                     continue
-                # parse co2e_per_dollar, default 0.0 when missing or non-numeric
-                co2_raw = (row.get('co2e_per_dollar') or '').strip()
+                co2_raw = (row.get("co2e_per_dollar") or "").strip()
                 try:
-                    co2 = float(co2_raw) if co2_raw != '' else 0.0
+                    co2 = float(co2_raw) if co2_raw != "" else 0.0
                 except Exception:
                     co2 = 0.0
 
-                # hierarchy field contains quoted comma-separated names; pick the last segment as the most specific name
-                hier = row.get('hierarchy') or ''
-                # remove stray double-quotes and split by comma
-                name = hier.replace('"', '').split(',')[-1].strip() if hier else (row.get('group') or '').strip()
-
+                hier = row.get("hierarchy") or ""
+                name = hier.replace('"', "").split(",")[-1].strip() if hier else (row.get("group") or "").strip()
                 cat_map[cid] = {"name": name or cid, "co2e": co2}
     except FileNotFoundError:
-        # If categories file is missing, return empty map
         return {}
     except Exception:
         return {}
 
-    # compute min/max co2e for scoring
-    co2_values = [v['co2e'] for v in cat_map.values()]
+    co2_values = [v["co2e"] for v in cat_map.values()]
     if not co2_values:
         return cat_map
 
     min_co2 = min(co2_values)
     max_co2 = max(co2_values)
 
-    # scoring: 1 (best/lowest emissions) .. 10 (worst/highest emissions)
     def score_for(co2):
         try:
             if max_co2 == min_co2:
                 return 5
             frac = (co2 - min_co2) / (max_co2 - min_co2)
-            s = 1 + int(frac * 9)
-            if s < 1:
-                s = 1
-            if s > 10:
-                s = 10
-            return s
+            score = 1 + int(frac * 9)
+            return max(1, min(score, 10))
         except Exception:
             return 5
 
     for cid, info in cat_map.items():
-        info['env_score'] = score_for(info.get('co2e', 0.0))
+        info["env_score"] = score_for(info.get("co2e", 0.0))
 
     return cat_map
 
 
-# load at module import so endpoints can use it
 CATEGORY_MAP = _load_category_map()
+
+
+def _predict_category(merchant_name: str):
+    try:
+        return ml_predict(merchant_name)
+    except Exception:
+        return []
+
+
+def _pick_prediction(merchant_name: str):
+    predictions = _predict_category(merchant_name)
+    if not predictions:
+        return None
+    top = predictions[0]
+    return {"category_id": top.category_id, "confidence": round(top.confidence, 4)}
+
+
+def _env_label_for_score(score):
+    try:
+        value = int(score)
+    except Exception:
+        value = 5
+    if value <= 3:
+        return "good"
+    if value <= 7:
+        return "neutral"
+    return "bad"
+
 
 @transaction_bp.route("/transactions", methods=["GET"])
 def api_transactions():
     transactions = []
     try:
-        with open(CSV_PATH, newline='') as csvfile:
+        with open(CSV_PATH, newline="") as csvfile:
             reader = csv.DictReader(csvfile)
             for idx, row in enumerate(reader, start=1):
-                cat_id = (row.get("category_id", "") or '').strip()
-                cat_info = CATEGORY_MAP.get(cat_id, None)
-                category_name = cat_info['name'] if cat_info else cat_id
-                env_score = cat_info['env_score'] if cat_info else 5
-
-                amount_val = 0.0
+                cat_id = (row.get("category_id") or "").strip()
+                cat_info = CATEGORY_MAP.get(cat_id, {})
+                env_score = cat_info.get("env_score", 5)
+                amount_val = row.get("amount", 0)
                 try:
-                    amount_val = float(row.get("amount", 0))
+                    amount_val = float(amount_val)
                 except Exception:
                     amount_val = 0.0
 
@@ -120,139 +139,273 @@ def api_transactions():
                     "id": idx,
                     "name": row.get("merchant", ""),
                     "category": cat_id,
-                    "category_name": category_name,
+                    "category_name": cat_info.get("name", cat_id),
                     "env_score": env_score,
+                    "env_label": _env_label_for_score(env_score),
+                    "user_id": row.get("user_id") or "guest",
                     "amount": amount_val,
-                    # keep `price` for compatibility / explicit naming
                     "price": amount_val,
                     "date": row.get("date", "")
                 })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except FileNotFoundError:
+        return jsonify([])
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
     return jsonify(transactions)
+
+
+@transaction_bp.route("/leaderboard", methods=["GET"])
+def api_leaderboard():
+    """Return leaderboard of users ranked by eco points (higher is better)."""
+
+    try:
+        per_user = {}
+        with open(CSV_PATH, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                uid = (row.get("user_id") or "guest")
+                try:
+                    amt = float(row.get("amount", 0) or 0)
+                except Exception:
+                    amt = 0.0
+                cid = (row.get("category_id") or "").strip()
+                cat_info = CATEGORY_MAP.get(cid, {})
+                co2e = cat_info.get("co2e", 0.0)
+                total_co2 = amt * co2e
+                per_user.setdefault(uid, {"total_spend": 0.0, "total_co2": 0.0, "tx_count": 0})
+                per_user[uid]["total_spend"] += amt
+                per_user[uid]["total_co2"] += total_co2
+                per_user[uid]["tx_count"] += 1
+
+        totals = [v["total_co2"] for v in per_user.values()]
+        out = []
+        for uid, v in per_user.items():
+            pct = percentile_of_value(v["total_co2"], totals) if totals else 0.0
+            try:
+                eco_points = round(100.0 - float(pct), 2)
+            except Exception:
+                eco_points = None
+            out.append({
+                "user_id": uid,
+                "total_spend": round(v["total_spend"], 2),
+                "total_co2": round(v["total_co2"], 4),
+                "tx_count": v["tx_count"],
+                "eco_score_percentile": round(pct, 2) if pct is not None else None,
+                "eco_points": eco_points,
+            })
+
+        out.sort(key=lambda x: (x["eco_points"] is None, -(x["eco_points"] or 0)))
+        try:
+            limit = int(request.args.get("limit", 50))
+        except Exception:
+            limit = 50
+        return jsonify(out[: max(0, limit)])
+    except FileNotFoundError:
+        return jsonify([])
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @transaction_bp.route("/transactions/categories", methods=["GET"])
 def api_transaction_categories():
-    """Return a summary list of categories with name, co2e_per_dollar and env_score.
-
-    Response: [{ "category_id": "13005000", "name": "Coffee Shop", "co2e": 67.0, "env_score": 3 }, ...]
-    """
     try:
         out = []
-        for cid, info in sorted(CATEGORY_MAP.items(), key=lambda x: x[0]):
+        for cid, info in sorted(CATEGORY_MAP.items(), key=lambda item: item[0]):
             out.append({
                 "category_id": cid,
-                "name": info.get('name'),
-                "co2e_per_dollar": info.get('co2e'),
-                "env_score": info.get('env_score')
+                "name": info.get("name"),
+                "co2e_per_dollar": info.get("co2e"),
+                "env_score": info.get("env_score"),
             })
         return jsonify(out)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @transaction_bp.route("/transactions/top", methods=["GET"])
 def api_transactions_top_categories():
-    """Return top categories by total CO2 impact (total_spend * co2e_per_dollar).
-
-    Query params:
-      - limit: number of categories to return (default 10)
-
-    Response: [{ "category_id": "13005000", "name": "Coffee Shop", "total_spend": 1234.5,
-                 "transaction_count": 12, "co2e_per_dollar": 67.0, "env_score": 3,
-                 "total_co2e": 82651.5 }, ...]
-    """
     try:
-        limit = int(request.args.get('limit', 10))
+        limit = int(request.args.get("limit", 10))
     except Exception:
         limit = 10
 
-    # aggregate transactions by category id
     agg = {}
     try:
-        with open(CSV_PATH, newline='') as csvfile:
+        with open(CSV_PATH, newline="") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                cid = (row.get('category_id') or '').strip()
+                cid = (row.get("category_id") or "").strip()
                 try:
-                    amt = float(row.get('amount', 0) or 0)
+                    amt = float(row.get("amount", 0) or 0)
                 except Exception:
                     amt = 0.0
+                agg.setdefault(cid, {"total_spend": 0.0, "count": 0})
+                agg[cid]["total_spend"] += amt
+                agg[cid]["count"] += 1
+    except FileNotFoundError:
+        return jsonify([])
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
-                if cid not in agg:
-                    agg[cid] = {'total_spend': 0.0, 'count': 0}
-                agg[cid]['total_spend'] += amt
-                agg[cid]['count'] += 1
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    # build result list including category metadata
     result = []
     for cid, data in agg.items():
         cat_info = CATEGORY_MAP.get(cid, {})
-        co2 = cat_info.get('co2e', 0.0)
-        env_score = cat_info.get('env_score', 5)
-        name = cat_info.get('name', cid)
-        total_spend = data['total_spend']
+        co2 = cat_info.get("co2e", 0.0)
+        env_score = cat_info.get("env_score", 5)
+        total_spend = data["total_spend"]
         total_co2e = total_spend * co2
-        # keep raw total_co2e for percentile calculation, we'll add percentile after
         result.append({
-            'category_id': cid,
-            'name': name,
-            'total_spend': round(total_spend, 2),
-            'transaction_count': data['count'],
-            'co2e_per_dollar': co2,
-            'env_score': env_score,
-            'total_co2e': round(total_co2e, 2),
-            '_total_co2e_raw': total_co2e
+            "category_id": cid,
+            "name": cat_info.get("name", cid),
+            "total_spend": round(total_spend, 2),
+            "transaction_count": data["count"],
+            "co2e_per_dollar": co2,
+            "env_score": env_score,
+            "total_co2e": round(total_co2e, 2),
+            "_total_co2e_raw": total_co2e,
         })
 
-    # sort by total_co2e desc
-    result.sort(key=lambda x: x.get('total_co2e', 0), reverse=True)
+    result.sort(key=lambda item: item.get("total_co2e", 0), reverse=True)
 
-    # compute percentile (0-100) for total_co2e across all categories
     try:
-        vals = [r['_total_co2e_raw'] for r in result]
-        # use the shared percentile helper (imported above or fallback)
-        for r in result:
+        vals = [entry["_total_co2e_raw"] for entry in result]
+        for entry in result:
             try:
-                v = r.get('_total_co2e_raw', 0.0)
-                p = percentile_of_value(v, vals)
-                # ensure numeric and clamp
-                if p is None or (isinstance(p, float) and (math.isnan(p) or math.isinf(p))):
-                    r['percentile'] = None
+                v = entry.get("_total_co2e_raw", 0.0)
+                pct = percentile_of_value(v, vals)
+                if pct is None or (isinstance(pct, float) and (math.isnan(pct) or math.isinf(pct))):
+                    entry["percentile"] = None
                 else:
-                    # round to 2 decimals
-                    r['percentile'] = round(float(p), 2)
+                    entry["percentile"] = round(float(pct), 2)
             except Exception:
-                r['percentile'] = None
+                entry["percentile"] = None
     except Exception:
-        for r in result:
-            r['percentile'] = None
+        for entry in result:
+            entry["percentile"] = None
 
-    # remove internal raw field before returning
-    for r in result:
-        if '_total_co2e_raw' in r:
-            del r['_total_co2e_raw']
+    for entry in result:
+        entry.pop("_total_co2e_raw", None)
 
-    return jsonify(result[:max(0, limit)])
+    return jsonify(result[: max(0, limit)])
+
+
+@transaction_bp.route("/transactions", methods=["POST"])
+def api_add_transaction():
+    """Add a new transaction, auto-classifying the category when missing."""
+
+    data = request.get_json(silent=True) or {}
+    merchant = (data.get("merchant") or "").strip()
+    category_id = (data.get("category_id") or "").strip()
+    amount = data.get("amount", 0.0)
+    date = (data.get("date") or "").strip()
+    user_id = (data.get("user_id") or "guest").strip() or "guest"
+
+    if not merchant or not date:
+        return jsonify({"error": "merchant and date are required"}), 400
+
+    prediction_meta = None
+    if not category_id:
+        pred = _pick_prediction(merchant)
+        if pred:
+            category_id = pred["category_id"]
+            prediction_meta = pred
+
+    if not category_id:
+        return jsonify({"error": "category_id is required when classifier has no prediction"}), 400
+
+    try:
+        amount = float(amount)
+    except Exception:
+        amount = 0.0
+
+    try:
+        file_exists = os.path.isfile(CSV_PATH)
+        with open(CSV_PATH, "a", newline="") as csvfile:
+            fieldnames = ["merchant", "category_id", "amount", "date", "user_id"]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            if not file_exists or os.stat(CSV_PATH).st_size == 0:
+                writer.writeheader()
+            writer.writerow({
+                "merchant": merchant,
+                "category_id": category_id,
+                "amount": amount,
+                "date": date,
+                "user_id": user_id,
+            })
+        resp = {"success": True}
+        if prediction_meta:
+            resp["predicted_category"] = prediction_meta
+        return jsonify(resp), 201
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@transaction_bp.route("/transactions/classify", methods=["POST"])
+def api_transactions_classify():
+    payload = request.get_json(silent=True) or {}
+    merchant = (payload.get("merchant") or "").strip()
+    if not merchant:
+        return jsonify({"error": "merchant is required"}), 400
+    predictions = [
+        {"category_id": prediction.category_id, "confidence": round(prediction.confidence, 4)}
+        for prediction in _predict_category(merchant)
+    ]
+    return jsonify({"merchant": merchant, "predictions": predictions})
+
+
+@transaction_bp.route("/transactions/eco-score", methods=["GET"])
+def api_eco_score():
+    """Return the user's eco score (percentile of total CO2 vs. all users)."""
+
+    try:
+        user_id = request.args.get("user_id")
+        per_user = {}
+        with open(CSV_PATH, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                uid = (row.get("user_id") or "guest")
+                try:
+                    amt = float(row.get("amount", 0) or 0)
+                except Exception:
+                    amt = 0.0
+                cid = (row.get("category_id") or "").strip()
+                cat_info = CATEGORY_MAP.get(cid, {})
+                co2e = cat_info.get("co2e", 0.0)
+                total_co2 = amt * co2e
+                per_user.setdefault(uid, {"total_spend": 0.0, "total_co2": 0.0, "tx_count": 0})
+                per_user[uid]["total_spend"] += amt
+                per_user[uid]["total_co2"] += total_co2
+                per_user[uid]["tx_count"] += 1
+
+        totals = [info["total_co2"] for info in per_user.values()]
+        target_uid = user_id or "guest"
+        target_total = per_user.get(target_uid, {"total_co2": 0.0})["total_co2"]
+        percentile = percentile_of_value(target_total, totals) if totals else 0.0
+        try:
+            eco_points = round(100.0 - float(percentile), 2)
+        except Exception:
+            eco_points = None
+        return jsonify({
+            "user_id": target_uid,
+            "total_co2": target_total,
+            "eco_score_percentile": percentile,
+            "eco_points": eco_points,
+        })
+    except FileNotFoundError:
+        return jsonify({"user_id": request.args.get("user_id") or "guest", "total_co2": 0, "eco_score_percentile": 0, "eco_points": 100})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @transaction_bp.route("/transactions/total", methods=["GET"])
 def api_transactions_total():
-    """
-    Return total spend for a given month.
-    Query params:
-      - month: in format YYYY-MM (e.g. 2025-11). If omitted, uses current month.
+    """Return total spend for a given month (YYYY-MM)."""
 
-    Response: { "month": "YYYY-MM", "total": 1234.56 }
-    """
     from datetime import datetime
+
     month_param = request.args.get("month")
     try:
         if month_param:
-            # expect YYYY-MM
             target = datetime.strptime(month_param, "%Y-%m")
         else:
             target = datetime.now()
@@ -260,22 +413,26 @@ def api_transactions_total():
         target_month = target.month
 
         total = 0.0
-        with open(CSV_PATH, newline='') as csvfile:
+        with open(CSV_PATH, newline="") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 date_str = row.get("date", "")
                 try:
-                    d = datetime.strptime(date_str, "%Y-%m-%d")
+                    tx_date = datetime.strptime(date_str, "%Y-%m-%d")
                 except Exception:
-                    # skip malformed dates
                     continue
-                if d.year == target_year and d.month == target_month:
-                    amt = float(row.get("amount", 0))
+                if tx_date.year == target_year and tx_date.month == target_month:
+                    try:
+                        amt = float(row.get("amount", 0))
+                    except Exception:
+                        amt = 0.0
                     total += amt
 
         return jsonify({"month": f"{target_year}-{str(target_month).zfill(2)}", "total": total})
     except ValueError:
         return jsonify({"error": "invalid month param, use YYYY-MM"}), 400
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
+    except FileNotFoundError:
+        return jsonify({"month": month_param or target.strftime("%Y-%m"), "total": 0.0})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+

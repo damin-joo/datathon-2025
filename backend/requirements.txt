@@ -1,7 +1,22 @@
 Flask==3.0.0
 Flask-CORS==4.0.0
+
+# Google Cloud + BigQuery
 google-cloud-bigquery==3.14.1
 google-auth==2.23.4
+
+# Data processing
 pandas==2.2.2
-python-multipart==0.0.6  # if using form-data uploads
-pyarrow==12.0.0          # for dataframe -> bigquery performance
+pyarrow==15.0.2     # ✓ Best version for Python 3.12 + macOS ARM
+
+# File upload (optional)
+python-multipart==0.0.6
+
+# ML + Utils
+scikit-learn==1.5.2
+joblib==1.4.2
+
+# Deep learning
+torch==2.3.1         # ✓ 2.9.1 DOES NOT exist yet — 2.3.1 is latest for macOS
+transformers==4.44.2
+onnxruntime==1.17.3  # ✓ 1.23.2 does NOT exist — 1.17.3 is latest stable

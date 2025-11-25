@@ -7,14 +7,16 @@ import {
   BarChart3,
   Target,
   Medal,
+  ListOrdered,
 } from "lucide-react";
 import UserMenu from "./ui/UserMenu";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Transactions", href: "/transactions", icon: Medal },
+  { name: "Ranking", href: "/ranking", icon: Medal },
+  { name: "Transactions", href: "/transactions", icon: ListOrdered },
   { name: "Scoring", href: "/scoring", icon: BarChart3 },
-  { name: "Goals", href: "/goals", icon: Target }
+  { name: "Goals", href: "/goals", icon: Target },
 ];
 
 export default function Nav() {
