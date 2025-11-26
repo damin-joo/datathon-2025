@@ -36,6 +36,15 @@ All endpoints are served under `/api`:
 | `/coaching/suggestions/ack` | POST | Record whether a suggestion was accepted or dismissed. |
 | `/goals`, `/monthly-scores`, `/score` | GET | Goal and scoring data for dashboard widgets. |
 
+### Leaderboard metadata
+
+The `/leaderboard` endpoint now attaches persona and trend metadata to every row so the frontend no longer needs fallback demo data. Each entry contains:
+
+- `display_name`, `persona`, `team`, `focus_area`, `highlight_action`, `location`, `avatar_color`
+- Derived stats such as `badge`, `streak_days`, `low_impact_ratio`, `avg_env_score`, `impact_delta_pct`, `category_mix`, `rank`, and `top_category`
+
+Profile details live in `data/user_profiles.json`. Add or edit an object in that file to override how a given `user_id` should appear. Any user missing from the JSON still receives auto-generated defaults (the service humanizes the email/local-part and infers the badge from eco points and low-impact ratios).
+
 ### Merchant classifier
 
 The `/transactions` POST route now falls back to a lightweight merchant classifier whenever `category_id` is omitted. Two engines are available:

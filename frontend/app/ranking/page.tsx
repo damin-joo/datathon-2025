@@ -45,6 +45,11 @@ export default function RankingPage() {
   }, []);
 
   const guestList = useMemo(() => GUEST_ACCOUNTS, []);
+  const userPlacement = useMemo(() => {
+    const idx = leaderboard.findIndex((row) => row.user_id === currentUser);
+    if (idx === -1) return null;
+    return { rank: idx + 1, entry: leaderboard[idx] };
+  }, [leaderboard, currentUser]);
 
   return (
     <>
@@ -52,6 +57,39 @@ export default function RankingPage() {
         <title>Eco Ranking</title>
       </Head>
       <div className="mt-20 pb-16 space-y-10 px-4 md:px-8">
+        {session?.user && (
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-sm font-semibold text-emerald-800 uppercase tracking-wide">Your standing</p>
+                <h2 className="text-2xl font-bold text-emerald-950">
+                  {userPlacement ? `Rank #${userPlacement.rank}` : "Not on this board yet"}
+                </h2>
+              </div>
+              {userPlacement && (
+                <div className="text-right">
+                  <p className="text-sm text-emerald-700">Eco points</p>
+                  <p className="text-3xl font-bold text-emerald-900">{userPlacement.entry.eco_points ?? 0}</p>
+                </div>
+              )}
+            </div>
+            {userPlacement ? (
+              <div className="flex flex-wrap items-center gap-4 text-sm text-emerald-900">
+                <span className="font-medium">{userPlacement.entry.display_name ?? userPlacement.entry.user_id}</span>
+                {userPlacement.entry.badge && (
+                  <span className="px-3 py-1 rounded-full bg-white border border-emerald-200 text-xs font-semibold">
+                    {userPlacement.entry.badge}
+                  </span>
+                )}
+                {typeof userPlacement.entry.total_co2 === "number" && (
+                  <span>{userPlacement.entry.total_co2.toFixed(1)} kg CO₂</span>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-emerald-900">Start transacting with EcoCard to appear in the live standings.</p>
+            )}
+          </section>
+        )}
         <header className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-sm font-medium">Community challenge</span>
@@ -79,16 +117,13 @@ export default function RankingPage() {
             <RankingLeaderboard data={leaderboard} currentUserId={currentUser} />
           </div>
           <aside className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Guest accounts</h2>
-            <p className="text-sm text-neutral-500">Use these personas on the login page to explore preset dashboards.</p>
-            <div className="space-y-3">
-              {guestList.map((acct) => (
-                <div key={acct.username} className="border border-neutral-200 rounded-xl p-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold">{acct.username}</span>
-                    <span className="font-mono text-xs bg-neutral-100 px-2 py-0.5 rounded">{acct.password}</span>
-                  </div>
-                  <p className="text-xs text-neutral-500 mt-1">{acct.persona}</p>
+            <h2 className="text-lg font-semibold">Badge guide</h2>
+            <p className="text-sm text-neutral-500">Each ranking tier reflects how diversified someone&apos;s low-carbon habits are.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Object.entries(BADGE_DESCRIPTIONS).map(([badge, description]) => (
+                <div key={badge} className="border border-neutral-100 rounded-xl p-4 bg-neutral-50">
+                  <p className="text-sm font-semibold">{badge}</p>
+                  <p className="text-xs text-neutral-500 mt-1">{description}</p>
                 </div>
               ))}
             </div>
@@ -96,13 +131,16 @@ export default function RankingPage() {
         </section>
 
         <section className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Badge guide</h2>
-          <p className="text-sm text-neutral-500">Each ranking tier reflects how diversified someone&apos;s low-carbon habits are.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Object.entries(BADGE_DESCRIPTIONS).map(([badge, description]) => (
-              <div key={badge} className="border border-neutral-100 rounded-xl p-4 bg-neutral-50">
-                <p className="text-sm font-semibold">{badge}</p>
-                <p className="text-xs text-neutral-500 mt-1">{description}</p>
+          <h2 className="text-lg font-semibold">Guest accounts</h2>
+          <p className="text-sm text-neutral-500">Use these personas on the login page to explore preset dashboards.</p>
+          <div className="space-y-3">
+            {guestList.map((acct) => (
+              <div key={acct.username} className="border border-neutral-200 rounded-xl p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold">{acct.username}</span>
+                  <span className="font-mono text-xs bg-neutral-100 px-2 py-0.5 rounded">{acct.password}</span>
+                </div>
+                <p className="text-xs text-neutral-500 mt-1">{acct.persona}</p>
               </div>
             ))}
           </div>

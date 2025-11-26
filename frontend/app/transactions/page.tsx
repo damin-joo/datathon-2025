@@ -14,6 +14,8 @@ type Tx = {
   amount: number;
   price?: number;
   date: string;
+  category_name: string;
+  env_label: string;
 };
 
 export default function Transactions() {

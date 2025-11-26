@@ -15,7 +15,7 @@ export default function ScoringPage() {
   const [loadingTop, setLoadingTop] = useState(true);
   const [errorTop, setErrorTop] = useState<string | null>(null);
 
-  const backend = "http://127.0.0.1:5000";
+  const backend = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://127.0.0.1:5000";
 
   // Fetch top categories (runs when session becomes available)
   useEffect(() => {

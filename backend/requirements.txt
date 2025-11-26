@@ -1,22 +1,24 @@
-Flask==3.0.0
-Flask-CORS==4.0.0
+# Web
+Flask
+Flask-CORS
 
 # Google Cloud + BigQuery
-google-cloud-bigquery==3.14.1
-google-auth==2.23.4
+google-cloud-bigquery
+google-auth
 
 # Data processing
-pandas==2.2.2
-pyarrow==15.0.2     # ✓ Best version for Python 3.12 + macOS ARM
+pandas
+pyarrow
 
-# File upload (optional)
-python-multipart==0.0.6
+# File upload
+python-multipart
 
 # ML + Utils
-scikit-learn==1.5.2
-joblib==1.4.2
+scikit-learn
+joblib
 
-# Deep learning
-torch==2.3.1         # ✓ 2.9.1 DOES NOT exist yet — 2.3.1 is latest for macOS
-transformers==4.44.2
-onnxruntime==1.17.3  # ✓ 1.23.2 does NOT exist — 1.17.3 is latest stable
+# Deep Learning
+torch
+transformers
+
+# onnxruntime==1.19.2

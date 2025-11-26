@@ -2,10 +2,14 @@ from flask import Blueprint, request, jsonify
 import csv
 import os
 import math
+import json
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 transaction_bp = Blueprint("transaction_bp", __name__)
 CSV_PATH = os.path.join(os.path.dirname(__file__), "../data/transactions.csv")
 CATEGORY_CSV_PATH = os.path.join(os.path.dirname(__file__), "../data/decarbon_categories.csv")
+USER_PROFILE_PATH = os.path.join(os.path.dirname(__file__), "../data/user_profiles.json")
 
 # Try to import the percentile helper from services; fall back to a local implementation if unavailable.
 try:
@@ -92,6 +96,27 @@ def _load_category_map():
 CATEGORY_MAP = _load_category_map()
 
 
+def _load_user_profiles():
+    try:
+        with open(USER_PROFILE_PATH) as fp:
+            raw = json.load(fp)
+    except FileNotFoundError:
+        return {}
+    except Exception:
+        return {}
+
+    profiles = {}
+    for entry in raw if isinstance(raw, list) else []:
+        uid = (entry.get("user_id") or "").strip()
+        if not uid:
+            continue
+        profiles[uid] = entry
+    return profiles
+
+
+USER_PROFILES = _load_user_profiles()
+
+
 def _predict_category(merchant_name: str):
     try:
         return ml_predict(merchant_name)
@@ -117,6 +142,91 @@ def _env_label_for_score(score):
     if value <= 7:
         return "neutral"
     return "bad"
+
+
+def _profile_for_user(user_id):
+    profile = USER_PROFILES.get(user_id)
+    if profile:
+        return profile
+    local = user_id.split("@")[0]
+    return {
+        "user_id": user_id,
+        "display_name": local or user_id,
+        "persona": "Eco citizen",
+        "focus_area": "Balanced habits",
+        "highlight_action": "Tracking first week of emissions",
+        "team": "Open cohort",
+        "location": "",
+    }
+
+
+def _badge_for(eco_points, low_impact_ratio):
+    try:
+        points = float(eco_points)
+    except Exception:
+        points = None
+
+    ratio = low_impact_ratio or 0.0
+
+    if (points is not None and points >= 90) or ratio >= 0.7:
+        return "Guardian"
+    if (points is not None and points >= 75) or ratio >= 0.55:
+        return "Trailblazer"
+    if (points is not None and points >= 60) or ratio >= 0.4:
+        return "Earth Ally"
+    return "Sprout"
+
+
+def _parse_date(value):
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except Exception:
+            continue
+    return None
+
+
+def _streak_days(dates):
+    if not dates:
+        return 0
+    ordered = sorted(dates)
+    current = ordered[-1]
+    streak = 0
+    probe = current
+    while probe in dates:
+        streak += 1
+        probe = probe - timedelta(days=1)
+    return streak
+
+
+def _category_mix(spend_map, total_spend):
+    if not spend_map or not total_spend:
+        return []
+    top_entries = sorted(spend_map.items(), key=lambda item: item[1], reverse=True)[:3]
+    mix = []
+    for cid, spend in top_entries:
+        share = spend / total_spend if total_spend else 0.0
+        cat_info = CATEGORY_MAP.get(cid, {})
+        mix.append({
+            "category_id": cid,
+            "name": cat_info.get("name", cid),
+            "share": round(share, 4),
+            "env_score": cat_info.get("env_score", 5),
+            "spend": round(spend, 2),
+        })
+    return mix
+
+
+def _impact_delta(value, cohort_average):
+    if cohort_average is None or cohort_average == 0 or value is None:
+        return None
+    try:
+        delta = (float(value) - float(cohort_average)) / float(cohort_average) * 100.0
+        return round(delta, 1)
+    except Exception:
+        return None
 
 
 @transaction_bp.route("/transactions", methods=["GET"])
@@ -172,12 +282,37 @@ def api_leaderboard():
                 cat_info = CATEGORY_MAP.get(cid, {})
                 co2e = cat_info.get("co2e", 0.0)
                 total_co2 = amt * co2e
-                per_user.setdefault(uid, {"total_spend": 0.0, "total_co2": 0.0, "tx_count": 0})
-                per_user[uid]["total_spend"] += amt
-                per_user[uid]["total_co2"] += total_co2
-                per_user[uid]["tx_count"] += 1
+                stats = per_user.setdefault(uid, {
+                    "total_spend": 0.0,
+                    "total_co2": 0.0,
+                    "tx_count": 0,
+                    "env_score_sum": 0.0,
+                    "low_impact_count": 0,
+                    "low_impact_dates": set(),
+                    "active_dates": set(),
+                    "category_spend": defaultdict(float),
+                    "category_counts": defaultdict(int),
+                })
+                stats["total_spend"] += amt
+                stats["total_co2"] += total_co2
+                stats["tx_count"] += 1
+                env_score = cat_info.get("env_score", 5)
+                stats["env_score_sum"] += env_score
+
+                tx_date = _parse_date(row.get("date", ""))
+                if tx_date:
+                    stats["active_dates"].add(tx_date)
+                if env_score <= 4:
+                    stats["low_impact_count"] += 1
+                    if tx_date:
+                        stats["low_impact_dates"].add(tx_date)
+
+                if cid:
+                    stats["category_spend"][cid] += amt
+                    stats["category_counts"][cid] += 1
 
         totals = [v["total_co2"] for v in per_user.values()]
+        avg_total = sum(totals) / len(totals) if totals else None
         out = []
         for uid, v in per_user.items():
             pct = percentile_of_value(v["total_co2"], totals) if totals else 0.0
@@ -185,8 +320,44 @@ def api_leaderboard():
                 eco_points = round(100.0 - float(pct), 2)
             except Exception:
                 eco_points = None
+
+            avg_env_score = round(v["env_score_sum"] / v["tx_count"], 2) if v["tx_count"] else None
+            low_impact_ratio = round(v["low_impact_count"] / v["tx_count"], 3) if v["tx_count"] else 0.0
+            streak_days = _streak_days(v["low_impact_dates"])
+            category_mix = _category_mix(v["category_spend"], v["total_spend"])
+            top_category = category_mix[0] if category_mix else None
+            impact_delta_pct = _impact_delta(v["total_co2"], avg_total)
+            trend = None
+            if impact_delta_pct is not None:
+                if impact_delta_pct <= -5:
+                    trend = "up"
+                elif impact_delta_pct >= 5:
+                    trend = "down"
+                else:
+                    trend = "steady"
+
+            profile = _profile_for_user(uid)
+            badge = profile.get("badge") or _badge_for(eco_points, low_impact_ratio)
+            focus_area = profile.get("focus_area") or (f"{top_category['name']} focus" if top_category else "Balanced habits")
+
             out.append({
                 "user_id": uid,
+                "display_name": profile.get("display_name") or uid,
+                "persona": profile.get("persona"),
+                "team": profile.get("team"),
+                "focus_area": focus_area,
+                "highlight_action": profile.get("highlight_action"),
+                "location": profile.get("location"),
+                "avatar_color": profile.get("avatar_color"),
+                "badge": badge,
+                "trend": trend or "steady",
+                "streak_days": streak_days,
+                "low_impact_ratio": low_impact_ratio,
+                "avg_env_score": avg_env_score,
+                "impact_delta_pct": impact_delta_pct,
+                "category_mix": category_mix,
+                "top_category": top_category,
+                "days_active": len(v["active_dates"]),
                 "total_spend": round(v["total_spend"], 2),
                 "total_co2": round(v["total_co2"], 4),
                 "tx_count": v["tx_count"],
@@ -195,6 +366,8 @@ def api_leaderboard():
             })
 
         out.sort(key=lambda x: (x["eco_points"] is None, -(x["eco_points"] or 0)))
+        for idx, entry in enumerate(out, start=1):
+            entry["rank"] = idx
         try:
             limit = int(request.args.get("limit", 50))
         except Exception:

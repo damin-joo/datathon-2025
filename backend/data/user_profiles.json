@@ -1,0 +1,72 @@
+[
+  {
+    "user_id": "guest",
+    "display_name": "Guest",
+    "persona": "Default dashboard view",
+    "team": "Coastal Commons",
+    "focus_area": "Balanced habits",
+    "highlight_action": "Keeps grocery emissions low with seasonal produce",
+    "location": "Vancouver, BC",
+    "avatar_color": "#047857"
+  },
+  {
+    "user_id": "river.runner",
+    "display_name": "River Runner",
+    "persona": "Outdoor commuter with lower transport emissions",
+    "team": "Fraser Flow",
+    "focus_area": "Transit swaps",
+    "highlight_action": "Bikes the Seawall 4 days a week",
+    "location": "North Vancouver, BC",
+    "avatar_color": "#059669"
+  },
+  {
+    "user_id": "luna.green",
+    "display_name": "Luna Green",
+    "persona": "Plant-based foodie experimenting with swaps",
+    "team": "Moonlit Markets",
+    "focus_area": "Low-impact food",
+    "highlight_action": "Hosts zero-waste potlucks twice a month",
+    "location": "Burnaby, BC",
+    "avatar_color": "#10b981"
+  },
+  {
+    "user_id": "solarpunk",
+    "display_name": "Solar Punk",
+    "persona": "Community organizer making bold lifestyle shifts",
+    "team": "Skytrain Syndicate",
+    "focus_area": "Energy downsizing",
+    "highlight_action": "Runs a neighborhood tool library",
+    "location": "New Westminster, BC",
+    "avatar_color": "#14b8a6"
+  },
+  {
+    "user_id": "urbancomposter",
+    "display_name": "Urban Composter",
+    "persona": "City dweller experimenting with low-waste goals",
+    "team": "Granville Gardeners",
+    "focus_area": "Low-waste goods",
+    "highlight_action": "Turns balcony scraps into compost tea",
+    "location": "Downtown Vancouver, BC",
+    "avatar_color": "#0ea5e9"
+  },
+  {
+    "user_id": "freshroots",
+    "display_name": "Fresh Roots",
+    "persona": "Family of four swapping toward electric mobility",
+    "team": "Cedar Circle",
+    "focus_area": "EV charging discipline",
+    "highlight_action": "Bundles errands to keep EV below 120 Wh/km",
+    "location": "Surrey, BC",
+    "avatar_color": "#6366f1"
+  },
+  {
+    "user_id": "northcoast",
+    "display_name": "North Coast",
+    "persona": "Remote worker balancing flights with greener groceries",
+    "team": "Harbor Stewards",
+    "focus_area": "Food + travel tradeoffs",
+    "highlight_action": "Offsets quarterly ferry rides with low-carbon meal plans",
+    "location": "Sunshine Coast, BC",
+    "avatar_color": "#8b5cf6"
+  }
+]

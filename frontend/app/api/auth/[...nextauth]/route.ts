@@ -1,7 +1,24 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { GUEST_ACCOUNTS } from "@/app/lib/demoData";
+import { findMockUser } from "@/app/lib/mockUsers";
 
 const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+const demoCredentialUsers = GUEST_ACCOUNTS.map((acct) => ({
+  username: acct.username.toLowerCase(),
+  email: `${acct.username.toLowerCase()}@demo.ecocard`,
+  password: acct.password,
+  name: acct.persona || acct.username,
+}));
+
+function matchDemoUser(identifier: string) {
+  const normalized = identifier.trim().toLowerCase();
+  return demoCredentialUsers.find(
+    (user) => user.email === normalized || user.username === normalized,
+  );
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -9,6 +26,34 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
       allowDangerousEmailAccountLinking: true,
+    }),
+    CredentialsProvider({
+      name: "EcoCard",
+      credentials: {
+        email: { label: "Email or username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const identifier = credentials?.email ?? "";
+        const password = credentials?.password ?? "";
+        if (!identifier || !password) {
+          throw new Error("Missing email or password");
+        }
+
+        const mockUser = findMockUser(identifier);
+        const guestUser = matchDemoUser(identifier);
+        const candidate = mockUser || guestUser;
+
+        if (!candidate || candidate.password !== password) {
+          throw new Error("Invalid credentials");
+        }
+
+        return {
+          id: candidate.email,
+          name: candidate.name,
+          email: candidate.email,
+        };
+      },
     }),
   ],
   pages: {
