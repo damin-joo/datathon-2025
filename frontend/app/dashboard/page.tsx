@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { ArrowUpRight, CreditCard, Target, TrendingUp } from "lucide-react";
 
 import Card from "../components/ui/Card";
 import Chart from "../components//ui/Chart";
@@ -317,6 +318,26 @@ export default function Home() {
     return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   })();
   const topImpacts = latestProfile?.top_categories?.slice(0, 3) ?? [];
+  const heroMetrics = [
+    {
+      label: 'Monthly spend',
+      value: formattedTotalSpend,
+      helper: 'Tracked this month',
+      icon: CreditCard,
+    },
+    {
+      label: 'Eco percentile',
+      value: `${ecoPercentile || 0}%`,
+      helper: 'Compared to EcoBank peers',
+      icon: TrendingUp,
+    },
+    {
+      label: 'Goal progress',
+      value: `${spendingReduction}%`,
+      helper: goals[0]?.title ?? 'Primary goal',
+      icon: Target,
+    },
+  ];
 
   return (
     <>
@@ -324,73 +345,186 @@ export default function Home() {
         <title>EcoCard</title>
         <meta name="description" content="Environmental Impact Credit Card" />
       </Head>
-      <div className="space-y-10 pb-12">
-        {/* Page Title */}
-        <h1 className="text-4xl font-bold tracking-tight">Welcome, {session.user?.name}</h1>
-
-        {/* Top Summary Cards */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card title="Monthly Spend" value={formattedTotalSpend} />
-          <Card title="Eco Percentile" value={`${ecoPercentile || 0}%`} />
-          <Card title="Eco Points" value={ecoPoints !== null ? `${ecoPoints}` : "-"}>
-            <p className="text-sm text-neutral-500">{formattedCO2 !== '-' ? `Total impact ${formattedCO2}` : 'Track purchases to see impact'}</p>
-          </Card>
+      <div className="space-y-12 pb-16">
+        <section
+          className="rounded-3xl text-white p-8 md:p-10 shadow-xl"
+          style={{ background: "linear-gradient(135deg,#0ea769,#0d8e5a,#066141)" }}
+        >
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-4">
+              <p className="uppercase tracking-[0.4em] text-xs text-white/70">Home base</p>
+              <h1 className="text-4xl md:text-5xl font-semibold leading-tight">
+                Welcome back, {session.user?.name?.split(' ')[0] ?? 'EcoBank member'}
+              </h1>
+              <p className="text-lg text-white/80 max-w-2xl">
+                Track spend, score, and coaching in one glance. Tap into detailed views whenever you need a deeper dive.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/scoring"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-emerald-900 shadow-sm"
+                >
+                  View scoring insights
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/transactions"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2 text-sm font-semibold text-white"
+                >
+                  Review transactions
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white/10 backdrop-blur border border-white/20 p-6 w-full max-w-md">
+              <p className="text-sm text-white/70">Eco percentile</p>
+              <p className="text-6xl font-bold mt-2">{ecoPercentile || 0}%</p>
+              <p className="text-white/80 mt-1">You&apos;re ahead of most EcoBank members.</p>
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {heroMetrics.map((metric) => (
+                  <div key={metric.label} className="rounded-xl bg-white/5 p-3">
+                    <metric.icon className="h-4 w-4 text-white/70" />
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/60 mt-2">{metric.label}</p>
+                    <p className="text-xl font-semibold">{metric.value}</p>
+                    <p className="text-xs text-white/70">{metric.helper}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
 
-        {/* Middle Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Transactions */}
-          <div className="space-y-3 lg:col-span-2">
-            <h2 className="text-xl font-semibold">Recent Transactions</h2>
-            <Card>
-              <div className="max-h-80 overflow-y-auto">
-                <TransactionList data={transactions.slice(0, 15)} />
+        <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Activity</p>
+                <h2 className="text-2xl font-semibold text-neutral-900">Recent transactions</h2>
               </div>
-            </Card>
+              <Link href="/transactions" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600">
+                View all
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="mt-6 rounded-2xl border border-neutral-100 bg-neutral-50/60 max-h-112 overflow-y-auto">
+              <TransactionList data={transactions.slice(0, 20)} />
+            </div>
           </div>
 
-          {/* Quick actions */}
-          <div className="space-y-3">
-            <h2 className="text-xl font-semibold">Quick Actions</h2>
-            <Card>
-              <div className="space-y-4 text-sm text-neutral-600">
-                <p>Jump into the focused views when you need to go deeper.</p>
-                <div className="space-y-3">
-                  <Link href="/transactions" className="block rounded-xl border border-neutral-200 px-4 py-3 hover:border-neutral-800">
-                    <span className="block text-base font-semibold text-neutral-900">Full Transactions Log</span>
-                    <span className="text-xs text-neutral-500">Filter and export the last 24 months</span>
-                  </Link>
-                  <Link href="/ranking" className="block rounded-xl border border-neutral-200 px-4 py-3 hover:border-neutral-800">
-                    <span className="block text-base font-semibold text-neutral-900">Eco Ranking League</span>
-                    <span className="text-xs text-neutral-500">Compare personas and badge tiers</span>
-                  </Link>
-                  <Link href="/goals" className="block rounded-xl border border-neutral-200 px-4 py-3 hover:border-neutral-800">
-                    <span className="block text-base font-semibold text-neutral-900">Goal Planner</span>
-                    <span className="text-xs text-neutral-500">Update your monthly targets</span>
-                  </Link>
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Navigation</p>
+                  <h2 className="text-lg font-semibold text-neutral-900">Quick actions</h2>
                 </div>
               </div>
-            </Card>
+              <div className="mt-4 space-y-3 text-sm">
+                {[{
+                  href: '/transactions',
+                  title: 'Full transactions log',
+                  body: 'Filter and export the last 24 months',
+                }, {
+                  href: '/ranking',
+                  title: 'Eco ranking league',
+                  body: 'Compare personas, badges, and regions',
+                }, {
+                  href: '/goals',
+                  title: 'Goal planner',
+                  body: 'Update your milestones and nudges',
+                }].map((action) => (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="block rounded-2xl border border-neutral-100 px-4 py-4 hover:border-neutral-400 hover:-translate-y-0.5 transition"
+                  >
+                    <p className="text-base font-semibold text-neutral-900 flex items-center gap-2">
+                      {action.title}
+                      <ArrowUpRight className="h-4 w-4" />
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-1">{action.body}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Weekly snapshot</p>
+                  <h2 className="text-lg font-semibold text-neutral-900">Impact summary</h2>
+                </div>
+                {latestProfile && (
+                  <span className="text-xs font-semibold text-emerald-600">Week of {profileWeekLabel ?? latestProfile.week}</span>
+                )}
+              </div>
+              <div className="mt-4">
+                {latestProfile ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-2xl border border-neutral-100 p-3">
+                        <p className="text-xs text-neutral-500">Spend</p>
+                        <p className="text-2xl font-semibold text-neutral-900">
+                          ${latestProfile.total_spend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-neutral-100 p-3">
+                        <p className="text-xs text-neutral-500">CO₂e</p>
+                        <p className="text-2xl font-semibold text-neutral-900">
+                          {latestProfile.total_co2.toLocaleString('en-US', { maximumFractionDigits: 1 })} kg
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-700">Top categories</p>
+                      {topImpacts.length > 0 ? (
+                        <ul className="mt-2 space-y-2">
+                          {topImpacts.map((cat) => {
+                            const badgeClass =
+                              cat.env_label === 'good'
+                                ? 'text-emerald-700'
+                                : cat.env_label === 'bad'
+                                ? 'text-rose-700'
+                                : 'text-amber-700';
+                            return (
+                              <li key={cat.category_id} className="flex items-center justify-between text-sm">
+                                <span className="font-medium text-neutral-800">{cat.category_name}</span>
+                                <span className={`text-xs ${badgeClass}`}>
+                                  {cat.total_co2.toLocaleString('en-US', { maximumFractionDigits: 1 })} kg · {cat.env_label}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-neutral-500 mt-2">No high-impact categories logged this week.</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-neutral-500">Add a few transactions to see your weekly impact breakdown.</p>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card title="Eco Score Progress" value={`${ecoPercentile || 0}%`}>
+        <section className="grid gap-6 lg:grid-cols-2">
+          <Card title="Eco score progress" value={`${ecoPercentile || 0}%`}>
             <p className="text-sm text-neutral-500">
               View the full breakdown on the <Link href="/scoring" className="text-emerald-600 hover:underline">scoring page</Link> to see how each category contributes.
             </p>
           </Card>
-          <Card title="Spending Reduction" value={`${spendingReduction}%`}>
+          <Card title="Spending reduction" value={`${spendingReduction}%`}>
             <p className="text-sm text-neutral-500">
               Tune your monthly target on the <Link href="/goals" className="text-emerald-600 hover:underline">goals planner</Link>.
             </p>
           </Card>
         </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-3">
+        <section className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Eco Coaching</h2>
+              <h2 className="text-xl font-semibold">Eco coaching</h2>
               <button
                 type="button"
                 onClick={fetchCoaching}
@@ -400,7 +534,7 @@ export default function Home() {
                 Refresh
               </button>
             </div>
-            <Card>
+            <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
               <CoachingSuggestions
                 suggestions={coaching?.suggestions ?? []}
                 ackStatuses={ackStatuses}
@@ -408,86 +542,31 @@ export default function Home() {
                 error={coachingError}
                 onAction={handleSuggestionAction}
               />
-            </Card>
+            </div>
           </div>
 
-          <div className="space-y-3">
-            <h2 className="text-xl font-semibold">Weekly Impact Snapshot</h2>
-            <Card>
-              {latestProfile ? (
-                <div className="space-y-4">
-                  <div className="text-sm text-neutral-500">
-                    Week of {profileWeekLabel ?? `Week ${latestProfile.week}`}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-xs text-neutral-500">Spend</p>
-                      <p className="text-2xl font-semibold text-neutral-900">
-                        ${latestProfile.total_spend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-500">CO₂e</p>
-                      <p className="text-2xl font-semibold text-neutral-900">
-                        {latestProfile.total_co2.toLocaleString('en-US', { maximumFractionDigits: 1 })} kg
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-700">Top categories</p>
-                    {topImpacts.length > 0 ? (
-                      <ul className="mt-2 space-y-2">
-                        {topImpacts.map((cat) => {
-                          const badgeClass =
-                            cat.env_label === 'good'
-                              ? 'text-emerald-700'
-                              : cat.env_label === 'bad'
-                              ? 'text-rose-700'
-                              : 'text-amber-700';
-                          return (
-                            <li key={cat.category_id} className="flex items-center justify-between text-sm">
-                              <span className="font-medium text-neutral-800">{cat.category_name}</span>
-                              <span className={`text-xs ${badgeClass}`}>
-                                {cat.total_co2.toLocaleString('en-US', { maximumFractionDigits: 1 })} kg · {cat.env_label}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-neutral-500 mt-2">No high-impact categories logged this week.</p>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-neutral-500">Add a few transactions to see your weekly impact breakdown.</p>
-              )}
-            </Card>
-          </div>
-        </section>
-
-        {/* Bottom Section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <h2 className="text-xl font-semibold">Scoring History</h2>
-            <Card>
-              <Chart data={monthData || []} />
-            </Card>
-          </div>
-
-          <div className="space-y-3">
-            <h2 className="text-xl font-semibold">Goals</h2>
-            <Card>
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Goals spotlight</h2>
+            <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
               <Goals data={goals || []} />
-            </Card>
+            </div>
           </div>
         </section>
 
-        {/* <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <Card title="Top Impact Categories"></Card>
+        <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">History</p>
+              <h2 className="text-2xl font-semibold text-neutral-900">Scoring trend</h2>
+            </div>
+            <Link href="/ranking" className="text-sm font-semibold text-emerald-600">
+              See ranking stories
+            </Link>
           </div>
-        </section> */}
+          <div className="mt-4">
+            <Chart data={monthData || []} />
+          </div>
+        </section>
       </div>
     </>
   );

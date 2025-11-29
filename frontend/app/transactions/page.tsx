@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TransactionList from "../components/ui/TransactionList";
 import Head from "next/head";
 import Link from "next/link";
 import useUser from "../hooks/useUser";
 import { useSession } from "next-auth/react";
+import { ArrowDownToLine, ArrowUpRight } from "lucide-react";
 
 type Tx = {
   id: number;
@@ -18,77 +19,32 @@ type Tx = {
   env_label: string;
 };
 
+const DEFAULT_BACKEND = "http://127.0.0.1:5000";
+
+const formatCurrency = (value?: number | string | null) => {
+    const numeric = Number(value ?? 0) || 0;
+    return new Intl.NumberFormat("en-CA", {
+        style: "currency",
+        currency: "CAD",
+        maximumFractionDigits: 0,
+    }).format(numeric);
+};
+
 export default function Transactions() {
     const { data, isLoading } = useUser();
-    const { data: session, status: sessionStatus } = useSession();
+    const { data: session } = useSession();
 
-    // Hooks must be called in the same order on every render.
-    // Move local state hooks to the top so early returns don't skip them.
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [transactions, setTransactions] = useState<Tx[]>([]);
+    const [isExporting, setIsExporting] = useState(false);
 
-    const backend = "http://127.0.0.1:5000";
+    const backend = process.env.NEXT_PUBLIC_BACKEND_URL ?? DEFAULT_BACKEND;
 
-    // Define nested component up-front so its hooks are not conditionally declared
-    function TopCategoriesCard() {
-        const [items, setItems] = useState<any[] | null>(null);
-        const [loadingTop, setLoadingTop] = useState(true);
-        const [errorTop, setErrorTop] = useState<string | null>(null);
-
-        useEffect(() => {
-            let mounted = true;
-            const fetchTop = async () => {
-                try {
-                    const res = await fetch(`${backend}/api/transactions/top?limit=10`);
-                    if (!res.ok) throw new Error(await res.text());
-                    const data = await res.json();
-                    if (!mounted) return;
-                    setItems(data || []);
-                } catch (err: any) {
-                    console.error('Error loading top categories:', err);
-                    setErrorTop(err?.message ?? String(err));
-                } finally {
-                    if (mounted) setLoadingTop(false);
-                }
-            };
-            fetchTop();
-            return () => { mounted = false; };
-        }, []);
-
-        if (loadingTop) return <div className="p-4">Loading top categories…</div>;
-        if (errorTop) return <div className="p-4 text-red-600">Error loading top categories: {errorTop}</div>;
-        if (!items || items.length === 0) return <div className="p-4">No category data</div>;
-
-        return (
-            <div className="mb-6 border rounded-md p-4 bg-white">
-                <h2 className="text-lg font-semibold mb-2">Top 10 Categories by CO2 Impact</h2>
-                <ul className="space-y-2">
-                    {items.map((c) => (
-                        <li key={c.category_id} className="flex justify-between items-baseline">
-                            <div>
-                                <div className="font-medium">{c.name}</div>
-                                <div className="text-sm text-neutral-500">Transactions: {c.transaction_count} • CO2: {c.total_co2e}</div>
-                            </div>
-                            <div className="text-sm text-right">
-                                <div className="text-xs text-neutral-500">Spend</div>
-                                <div className="font-semibold">${c.total_spend}</div>
-                                <div className="text-xs mt-1">{c.percentile}%</div>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        );
-    }
-
-    // Transactions fetching effect must run (hook called) on every render to keep hook order stable.
     useEffect(() => {
         let mounted = true;
         const fetchTx = async () => {
-            // don't fetch until user/session is ready
             if (isLoading || !session) {
-                // still mark loading false if not mounted? keep loading true until we actually fetch
                 return;
             }
             try {
@@ -98,7 +54,6 @@ export default function Transactions() {
 
                 if (!mounted) return;
 
-                // Filter transactions within last 2 years
                 const now = new Date();
                 const cutoff = new Date(now);
                 cutoff.setFullYear(cutoff.getFullYear() - 2);
@@ -109,7 +64,6 @@ export default function Transactions() {
                     return !isNaN(d.getTime()) && d >= cutoff && d <= now;
                 });
 
-                // Sort desc by date
                 filtered.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
                 setTransactions(filtered);
@@ -121,10 +75,48 @@ export default function Transactions() {
             }
         };
         fetchTx();
-        return () => { mounted = false; };
-    }, [isLoading, session]);
+        return () => {
+            mounted = false;
+        };
+    }, [backend, isLoading, session]);
 
-    if (isLoading) return <p className="text-center py-10">Loading goals...</p>;
+    const totalSpend = useMemo(() => {
+        if (!transactions.length) return 0;
+        return transactions.reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
+    }, [transactions]);
+
+    const handleExport = () => {
+        if (isExporting || !transactions.length || typeof window === "undefined") return;
+        setIsExporting(true);
+        try {
+            const headers = ["id","name","category","amount","date","env_label"];
+            const csvRows = transactions.map((tx) =>
+                [tx.id, tx.name, tx.category_name ?? tx.category, tx.amount, tx.date, tx.env_label]
+                    .map((value) => {
+                        const stringValue = value ?? "";
+                        const escaped = `${stringValue}`.replace(/"/g, '""');
+                        return `"${escaped}"`;
+                    })
+                    .join(",")
+            );
+            const csvContent = [headers.join(","), ...csvRows].join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.setAttribute("download", `eco-transactions-${Date.now()}.csv`);
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Failed to export CSV", err);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    if (isLoading) return <p className="text-center py-10">Loading transactions…</p>;
     if (!session)
         return (
             <div className="text-center py-10">
@@ -140,20 +132,80 @@ export default function Transactions() {
 
     return (
         <>
-        <Head>
-            <title>Transactions</title>
-        </Head>
+            <Head>
+                <title>Transactions</title>
+            </Head>
 
-        <div className="p-6 mt-20">
-            <h1 className="text-2xl font-bold mb-4">Transactions (last 2 years)</h1>
+            <div className="space-y-10 pb-16 mt-20">
+                <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Ledger</p>
+                            <h1 className="text-3xl font-semibold text-neutral-900">Transactions (last 24 months)</h1>
+                            <p className="text-sm text-neutral-500 mt-1">{transactions.length} entries • {formatCurrency(totalSpend)} tracked</p>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={handleExport}
+                                disabled={isExporting || transactions.length === 0}
+                                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-800 hover:border-neutral-800 disabled:opacity-50"
+                            >
+                                <ArrowDownToLine className="h-4 w-4" />
+                                Export CSV
+                            </button>
+                            <Link
+                                href="/scoring"
+                                className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+                            >
+                                See scoring impact
+                                <ArrowUpRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+                    </div>
+                </section>
 
-            <div className="border rounded-md p-4 bg-white">
-                <div className="mb-3 text-sm text-neutral-500">Showing {transactions.length} transactions from the last 2 years.</div>
-                <div className="max-h-[70vh] overflow-y-auto">
-                    <TransactionList data={transactions} />
-                </div>
+                <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+                    <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 max-h-112 overflow-y-auto">
+                            <TransactionList data={transactions} />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+                            <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Filters</p>
+                            <p className="text-sm text-neutral-500 mt-2">Full filtering will live here soon.</p>
+                        </div>
+                        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+                            <p className="text-xs uppercase tracking-[0.4em] text-neutral-400">Next steps</p>
+                            <div className="mt-3 space-y-3 text-sm">
+                                {[{
+                                    title: "Spot anomalies",
+                                    body: "Jump to scoring to see spikes",
+                                    href: "/scoring",
+                                }, {
+                                    title: "Set goal tracking",
+                                    body: "Convert big spend into habits",
+                                    href: "/goals",
+                                }].map((card) => (
+                                    <Link
+                                        key={card.href}
+                                        href={card.href}
+                                        className="block rounded-2xl border border-neutral-100 px-4 py-3 hover:border-neutral-400 transition"
+                                    >
+                                        <p className="font-semibold text-neutral-900 flex items-center gap-2">
+                                            {card.title}
+                                            <ArrowUpRight className="h-4 w-4" />
+                                        </p>
+                                        <p className="text-xs text-neutral-500 mt-1">{card.body}</p>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
-        </div>
         </>
     );
 }

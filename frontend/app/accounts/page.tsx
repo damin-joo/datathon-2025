@@ -1,7 +1,3 @@
-"use client";
+import { createFillerPage } from "@/app/lib/fillerPageFactory";
 
-export default function Page() {
-    return (
-        <div></div>
-    )
-}
+export default createFillerPage("accounts");
