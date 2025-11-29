@@ -2,9 +2,9 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const router = useRouter();
@@ -182,5 +182,19 @@ export default function LoginPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-50 px-4 py-12 flex items-center justify-center text-neutral-500">
+          Preparing login experience…
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
