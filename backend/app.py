@@ -20,9 +20,13 @@ app.register_blueprint(transaction_bp, url_prefix="/api")
 app.register_blueprint(goals_bp, url_prefix="/api")
 app.register_blueprint(coach_bp, url_prefix="/api")
 
+@app.route("/")
+def hello():
+    return ("hello world")
+
 @app.route("/api/health")
 def health():
-    return {"status": "OK", "storage": "local csv"}
+    return {"status": "OK"}
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
